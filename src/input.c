@@ -33,12 +33,16 @@ static void* input_thread(void* args){
                     event.Mouse.x = mouse_event.x;
                     event.Mouse.y = mouse_event.y;
 
+					event.Mouse.shift = false;
                     event.Mouse.button_index = MOUSE_NONE;
                     if(mouse_event.bstate & BUTTON1_PRESSED){
                         event.Mouse.button_index = MOUSE_LEFT;
                     }
-                    if(mouse_event.bstate & BUTTON2_PRESSED){
+                    if(mouse_event.bstate & BUTTON3_PRESSED){
                         event.Mouse.button_index = MOUSE_RIGHT;
+                    }
+                    if(mouse_event.bstate & BUTTON_SHIFT){
+                    	event.Mouse.shift = true;
                     }
                 }else{
                     DFATAL("Unknown mouse state error!");

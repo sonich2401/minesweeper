@@ -93,6 +93,7 @@ static bool game_over = false;
 #define tile_to_color(tile) (COLOR_LIST[tile])
 
 static void uncover_tile(u16 x, u16 y){
+	if(INDEX_BOARD(game_board, x, y) == TILE_FLAG) return;
     if(INDEX_BOARD(game_board, x, y) == TILE_UNCOVERED) return;
     if(INDEX_BOARD(solution_board, x, y) == TILE_MINE){
         INDEX_BOARD(game_board, x, y) = TILE_MINE;
@@ -144,10 +145,24 @@ static void* game_thread(void* args){
                 break;
                 case INPUT_EVENT_MOUSE:
                     //mvprintw(0,0,"a %i, %i: %i", event.Mouse.x, event.Mouse.y, event.Mouse.button_index);
-                    uncover_tile(event.Mouse.x, event.Mouse.y);
+					if(event.Mouse.shift == true || (event.Mouse.button_index & MOUSE_RIGHT)){
+						tile_t* cur_tile = &INDEX_BOARD(game_board, event.Mouse.x, event.Mouse.y);
+						if(*cur_tile == TILE_COVERED){
+							*cur_tile = TILE_FLAG;
+						}
+						if(*cur_tile == TILE_FLAG){
+							*cur_tile = TILE_COVERED;
+						}
+						place_color_char(event.Mouse.x, event.Mouse.y, *cur_tile, tile_to_color(*cur_tile));
+					}else{
+                   		uncover_tile(event.Mouse.x, event.Mouse.y);
+                    }
                 break;
 
                 case INPUT_EVENT_KEYDOWN:
+					if(event.KeyDown.key == 'q'){
+						return NULL; //exit game
+					}         	
                 break;
             }
             

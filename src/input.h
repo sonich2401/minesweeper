@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include "bit_types.h"
 
 typedef enum{
@@ -22,6 +23,7 @@ typedef struct{
             u16 x;
             u16 y;
             INPUT_EVENT_MOUSE_t button_index;
+            bool shift;
         }Mouse;
 
         struct{

@@ -54,7 +54,7 @@ static void init_curses(void){
     (void)noecho();
     (void)raw();
     (void)keypad(stdscr, TRUE);
-    (void)mousemask(BUTTON1_PRESSED | BUTTON2_PRESSED, NULL);
+    (void)mousemask(BUTTON1_PRESSED | BUTTON3_PRESSED | BUTTON_SHIFT, NULL);
 
     //Create colors
     start_color();
