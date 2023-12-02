@@ -48,12 +48,23 @@ static void init_args(int argc, char* __restrict__ argv[]){
     SMART_ASSERT(argc == 0, "There are still arguments left over!");
 }
 
+#include "colors.h"
 static void init_curses(void){
     g_game_window = initscr();
     (void)noecho();
     (void)raw();
     (void)keypad(stdscr, TRUE);
     (void)mousemask(BUTTON1_PRESSED | BUTTON2_PRESSED, NULL);
+
+    //Create colors
+    start_color();
+    init_pair(MINESWEEPER_COLOR_BLANK, COLOR_WHITE, COLOR_BLACK);
+    init_pair(MINESWEEPER_COLOR_RED, COLOR_RED, COLOR_BLACK);
+    init_pair(MINESWEEPER_COLOR_COVERED_TILE, COLOR_WHITE, COLOR_WHITE);
+    init_pair(MINESWEEPER_COLOR_GREEN, COLOR_GREEN, COLOR_BLACK);
+    init_pair(MINESWEEPER_COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(MINESWEEPER_COLOR_CYAN, COLOR_CYAN, COLOR_BLACK);
+    init_pair(MINESWEEPER_COLOR_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
 }
 
 

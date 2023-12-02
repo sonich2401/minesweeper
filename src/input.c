@@ -82,12 +82,12 @@ InputEvent_t input_poll_input(void){
 }
 
 void init_input(void){
+    vector_init(&input_fifo, sizeof(InputEvent_t), NULL);
+
     int return_code;
     return_code = pthread_create(&input_thread_id, NULL, input_thread, NULL);
     SMART_ASSERT(return_code == 0, "input thread failed to create!");
 
     return_code = pthread_mutex_init(&input_mutex, NULL);
     SMART_ASSERT(return_code == 0, "input mutex failed to create!");
-
-    vector_init(&input_fifo, sizeof(InputEvent_t), NULL);
 }

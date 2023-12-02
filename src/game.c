@@ -12,7 +12,9 @@
 #include "input.h"
 
 #include "debug.h"
-
+#define ACCESS_GLOBALS
+#include "globals.h"
+#include "colors.h"
 
 
 enum{
@@ -27,11 +29,54 @@ enum{
     TILE_8,
     TILE_MINE,
     TILE_INVALID,
-    TILE_COVERED = 0xFF
+    TILE_COVERED,
+    TILE_FLAG,
+    TILE_ENUM_SIZE
+};
+
+
+static const char IMG_LIST[TILE_ENUM_SIZE] = {
+    ' ',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '*',
+    '\0',
+    ' ',
+    '>',
+};
+
+static const COLOR_t COLOR_LIST[TILE_ENUM_SIZE] = {
+    MINESWEEPER_COLOR_BLANK,
+    MINESWEEPER_COLOR_CYAN, //1
+    MINESWEEPER_COLOR_GREEN,
+    MINESWEEPER_COLOR_RED,
+    MINESWEEPER_COLOR_MAGENTA,
+    MINESWEEPER_COLOR_YELLOW,
+    MINESWEEPER_COLOR_GREEN,
+    MINESWEEPER_COLOR_CYAN,
+    MINESWEEPER_COLOR_RED, //8
+    MINESWEEPER_COLOR_RED, //'*'
+    MINESWEEPER_COLOR_BLANK,
+    MINESWEEPER_COLOR_COVERED_TILE,
+    MINESWEEPER_COLOR_RED, //'>'
 };
 
 
 
+#define IMG_MINE (IMG_LIST[TILE_MINE])
+#define IMG_COVERED (IMG_LIST[TILE_COVERED])
+#define IMG_UNCONVERED (IMG_LIST[TILE_UNCOVERED])
+#define IMG_FLAG (IMG_LIST[TILE_FLAG])
+
+
+
+#define INDEX_BOARD(buffer, x, y) buffer[g_game_w * y + x]
 
 static volatile bool is_running = false;
 static pthread_t game_thread_id;
@@ -39,8 +84,47 @@ static pthread_t game_thread_id;
 
 typedef u8 tile_t;
 
-tile_t* solution_board = NULL;
-tile_t* game_board = NULL;
+static tile_t* solution_board = NULL;
+static tile_t* game_board = NULL;
+
+static bool game_over = false;
+
+
+#define tile_to_color(tile) (COLOR_LIST[tile])
+
+static void uncover_tile(u16 x, u16 y){
+    if(INDEX_BOARD(game_board, x, y) == TILE_UNCOVERED) return;
+    if(INDEX_BOARD(solution_board, x, y) == TILE_MINE){
+        INDEX_BOARD(game_board, x, y) = TILE_MINE;
+        place_color_char(x, y, IMG_MINE, MINESWEEPER_COLOR_RED);
+        game_over = true;
+        return;
+    }
+
+    tile_t solution_tile = INDEX_BOARD(solution_board, x, y);
+    INDEX_BOARD(game_board, x, y) = solution_tile;
+
+    place_color_char(x, y, IMG_LIST[solution_tile], tile_to_color(solution_tile));
+
+    if(solution_tile != TILE_UNCOVERED) return; //Dont uncover the radius around it if it has a number
+
+    u16 minx, miny;
+    u16 maxx, maxy;
+    minx = x - (x > 0);
+    miny = y - (y > 0);
+    maxx = x + (x+1 < g_game_w);
+    maxy = y + (y+1 < g_game_h);
+
+    for(u16 tmpy = miny; tmpy <= maxy; tmpy++){
+        for(u16 tmpx = minx; tmpx <= maxx; tmpx++){
+            if(tmpx == x && tmpy == y) continue;
+            tile_t tile = INDEX_BOARD(game_board, tmpx, tmpy);
+            if(tile != TILE_MINE && tile != TILE_UNCOVERED){
+                uncover_tile(tmpx, tmpy);
+            }
+        }
+    }
+}
 
 
 
@@ -60,7 +144,7 @@ static void* game_thread(void* args){
                 break;
                 case INPUT_EVENT_MOUSE:
                     //mvprintw(0,0,"a %i, %i: %i", event.Mouse.x, event.Mouse.y, event.Mouse.button_index);
-                    mvaddch(event.Mouse.y, event.Mouse.x, rand() % 10 + 'A');
+                    uncover_tile(event.Mouse.x, event.Mouse.y);
                 break;
 
                 case INPUT_EVENT_KEYDOWN:
@@ -70,15 +154,16 @@ static void* game_thread(void* args){
             event = input_poll_input(); //Get next input
         }
 
+
+        if(game_over){
+            return NULL;
+        }
         
     }
     
     return NULL;
 }
 
-
-#define ACCESS_GLOBALS
-#include "globals.h"
 
 
 static void game_build_board(void){
@@ -94,12 +179,17 @@ static void game_build_board(void){
 
         solution_board[y * g_game_w + x] = TILE_MINE;
 
-        for(u16 tmpy = y - (y > 0); tmpy < (y + (y != SHORT_MAX)); tmpy++){
-            if(tmpy >= g_game_h) continue;
-            for(u16 tmpx = x - (x > 0); tmpx < (x + (x != SHORT_MAX)); tmpx++){
-                if(tmpx >= g_game_w) continue;
+        u16 minx, miny;
+        u16 maxx, maxy;
+        minx = x - (x > 0);
+        miny = y - (y > 0);
+        maxx = x + (x+1 < g_game_w);
+        maxy = y + (y+1 < g_game_h);
 
-                tile_t* tile = &solution_board[g_game_w * tmpy + tmpx];
+        for(u16 tmpy = miny; tmpy <= maxy; tmpy++){
+            for(u16 tmpx = minx; tmpx <= maxx; tmpx++){
+                if(tmpx == x && tmpy == y) continue;
+                tile_t* tile = &INDEX_BOARD(solution_board, tmpx, tmpy);
 
                 if(*tile == TILE_MINE) continue;
                 SMART_ASSERT(*tile < TILE_8, "this should never happen");
@@ -110,7 +200,7 @@ static void game_build_board(void){
 }
 
 
-#if TILE_UNCOVERED != 0
+#if TILE_UNCOVERED != 0 || TILE_1 != 0
     #error "TILE_UNCOVERED must be zero for game_build_board to work!"
 #endif
 
@@ -127,6 +217,12 @@ void init_game(void){
     }
 
     game_build_board();
+
+    for(u16 x = 0; x < g_game_w; x++){
+        for(u16 y = 0; y < g_game_h; y++){
+            place_color_char(x, y, IMG_COVERED, MINESWEEPER_COLOR_COVERED_TILE);
+        }
+    }
 
     int return_code;
     //return_code = pthread_create(&game_thread_id, NULL, game_thread, NULL);
