@@ -64,7 +64,7 @@ static const COLOR_t COLOR_LIST[TILE_ENUM_SIZE] = {
     MINESWEEPER_COLOR_RED, //'*'
     MINESWEEPER_COLOR_BLANK,
     MINESWEEPER_COLOR_COVERED_TILE,
-    MINESWEEPER_COLOR_RED, //'>'
+    MINESWEEPER_COLOR_FLAG, //'>'
 };
 
 
@@ -87,6 +87,7 @@ typedef u8 tile_t;
 static tile_t* solution_board = NULL;
 static tile_t* game_board = NULL;
 
+static u32 covered_tile_count;
 static bool game_over = false;
 
 
@@ -106,6 +107,13 @@ static void uncover_tile(u16 x, u16 y){
     INDEX_BOARD(game_board, x, y) = solution_tile;
 
     place_color_char(x, y, IMG_LIST[solution_tile], tile_to_color(solution_tile));
+    covered_tile_count--;
+
+    if(covered_tile_count <= g_bomb_count){
+    	game_over = true;
+    	//TODO: add a message to say that you won
+    	return;
+    }
 
     if(solution_tile != TILE_UNCOVERED) return; //Dont uncover the radius around it if it has a number
 
@@ -241,6 +249,9 @@ void init_game(void){
             place_color_char(x, y, IMG_COVERED, MINESWEEPER_COLOR_COVERED_TILE);
         }
     }
+
+
+    covered_tile_count = (u32)g_game_w * (u32)g_game_h;
 
     int return_code;
     //return_code = pthread_create(&game_thread_id, NULL, game_thread, NULL);
