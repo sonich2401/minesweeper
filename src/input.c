@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ncurses.h>
+#include <unistd.h>
 #include "debug.h"
 #include "vector.h"
 
@@ -23,6 +24,7 @@ static void* input_thread(void* args){
     
     InputEvent_t event;
     while(1){
+    	usleep(1000);
         input_cache = getch();
 
         switch(input_cache){
@@ -48,6 +50,11 @@ static void* input_thread(void* args){
                     DFATAL("Unknown mouse state error!");
                 }
             break;
+            
+            case ERR:
+            	continue;
+            break;
+            
             default:
                 event.packet_type = INPUT_EVENT_KEYDOWN;
                 event.KeyDown.key = input_cache;
@@ -85,7 +92,15 @@ InputEvent_t input_poll_input(void){
     return returned_data;
 }
 
+
+
+#define ACCESS_GLOBALS
+#include "globals.h"
+
+
 void init_input(void){
+	nodelay(g_game_window, 0);
+
     vector_init(&input_fifo, sizeof(InputEvent_t), NULL);
 
     int return_code;

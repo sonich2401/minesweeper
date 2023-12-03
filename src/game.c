@@ -135,6 +135,9 @@ static void* game_thread(void* args){
 
     InputEvent_t event;
     while(true){
+		//Create delay to not max out CPU
+		usleep(1000);
+    
         //Check for new input
         event = input_poll_input();
         while(event.packet_type != INPUT_EVENT_NONE){
@@ -150,10 +153,10 @@ static void* game_thread(void* args){
 						if(*cur_tile == TILE_COVERED){
 							*cur_tile = TILE_FLAG;
 						}
-						if(*cur_tile == TILE_FLAG){
+						else if(*cur_tile == TILE_FLAG){
 							*cur_tile = TILE_COVERED;
 						}
-						place_color_char(event.Mouse.x, event.Mouse.y, *cur_tile, tile_to_color(*cur_tile));
+						place_color_char(event.Mouse.x, event.Mouse.y, IMG_LIST[*cur_tile], tile_to_color(*cur_tile));
 					}else{
                    		uncover_tile(event.Mouse.x, event.Mouse.y);
                     }
