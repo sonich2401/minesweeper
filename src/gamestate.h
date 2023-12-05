@@ -1,0 +1,7 @@
+#pragma once
+
+typedef enum{
+	GAMESTATE_PLAYING,
+	GAMESTATE_DEAD,
+	GAMESTATE_WIN,
+}GAMESTATE_t;

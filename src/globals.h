@@ -7,10 +7,12 @@
 #ifdef ACCESS_GLOBALS
     #include "bit_types.h"
     #include <ncurses.h>
+    #include "gamestate.h"
 
     extern u16 g_game_w;
     extern u16 g_game_h;
     extern u16 g_bomb_count;
+    extern GAMESTATE_t g_game_state;
 
     extern WINDOW* g_game_window;
 

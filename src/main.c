@@ -80,6 +80,20 @@ int main(int argc, char* argv[]){
     int return_code = run_game();
 
     endwin();
+
+
+	switch(g_game_state){
+		case GAMESTATE_PLAYING:
+			DFATAL("This should never occur!");
+		break;
+		case GAMESTATE_WIN:
+			puts("You won!");
+		break;
+		case GAMESTATE_DEAD:
+			puts("You lost!");
+		break;
+	}
+
  
     return return_code;
 }

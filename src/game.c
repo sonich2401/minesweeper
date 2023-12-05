@@ -88,7 +88,6 @@ static tile_t* solution_board = NULL;
 static tile_t* game_board = NULL;
 
 static u32 covered_tile_count;
-static bool game_over = false;
 
 
 #define tile_to_color(tile) (COLOR_LIST[tile])
@@ -99,7 +98,7 @@ static void uncover_tile(u16 x, u16 y){
     if(INDEX_BOARD(solution_board, x, y) == TILE_MINE){
         INDEX_BOARD(game_board, x, y) = TILE_MINE;
         place_color_char(x, y, IMG_MINE, MINESWEEPER_COLOR_RED);
-        game_over = true;
+        g_game_state = GAMESTATE_DEAD;
         return;
     }
 
@@ -110,8 +109,7 @@ static void uncover_tile(u16 x, u16 y){
     covered_tile_count--;
 
     if(covered_tile_count <= g_bomb_count){
-    	game_over = true;
-    	//TODO: add a message to say that you won
+		g_game_state = GAMESTATE_WIN;
     	return;
     }
 
@@ -181,7 +179,7 @@ static void* game_thread(void* args){
         }
 
 
-        if(game_over){
+        if(g_game_state != GAMESTATE_PLAYING){
             return NULL;
         }
         
@@ -226,6 +224,42 @@ static void game_build_board(void){
 }
 
 
+static void garentee_uncover(void){
+	bool opening_found = false;
+	//Garentee an opening.
+	//Prioritze uncovering a tile rather than a tile with a number on it.
+	for(u16 y = 0; y < g_game_h; y++){
+		for(u16 x = 0; x < g_game_w; x++){
+			if(INDEX_BOARD(solution_board, x, y) == TILE_UNCOVERED){
+				uncover_tile(x, y);
+				//Exit for loop
+				y = g_game_h;
+				opening_found = true;
+				break;
+			}
+		}
+	}
+
+	//If there were no tiles that were empty (this happens when mines are tightly packed together) then we
+	//will uncover the first numbered tile
+    if(opening_found == false){
+		for(u16 y = 0; y < g_game_h; y++){
+			for(u16 x = 0; x < g_game_w; x++){
+				if(INDEX_BOARD(solution_board, x, y) != TILE_MINE){
+					uncover_tile(x, y);
+					//Exit for loop
+					y = g_game_h;
+					opening_found = true;
+					break;
+				}
+			}
+		}
+    }
+
+    SMART_ASSERT(opening_found == true, "The board generated has no solution!");
+}
+
+
 #if TILE_UNCOVERED != 0 || TILE_1 != 0
     #error "TILE_UNCOVERED must be zero for game_build_board to work!"
 #endif
@@ -250,20 +284,29 @@ void init_game(void){
         }
     }
 
-
     covered_tile_count = (u32)g_game_w * (u32)g_game_h;
 
-    int return_code;
-    //return_code = pthread_create(&game_thread_id, NULL, game_thread, NULL);
-    //SMART_ASSERT(return_code == 0, "failed to create game thread");
+
+	garentee_uncover();
+
+	g_game_state = GAMESTATE_PLAYING;
+
+	#ifdef GAME_USE_THREADS
+	    int return_code;
+	    return_code = pthread_create(&game_thread_id, NULL, game_thread, NULL);
+	    SMART_ASSERT(return_code == 0, "failed to create game thread");
+    #endif
 }
 
 
 int run_game(void){
     
     is_running = true;
-    //(void)pthread_join(game_thread_id, NULL);
-    (void)game_thread(NULL);
+    #ifdef GAME_USE_THREADS
+		(void)pthread_join(game_thread_id, NULL);
+    #else
+		(void)game_thread(NULL);
+	#endif
     
     return EXIT_SUCCESS;
 }
